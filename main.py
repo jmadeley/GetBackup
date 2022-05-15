@@ -42,29 +42,32 @@ def GetBackup():
     drive_info = locate_usb()
     if len(drive_info) == 0:
         print("Error: No USB drive detected")
-        sys.exit(1)
+        return 1
     elif len(drive_info) > 1:
         print(f'Error: More than one USB drive detected - ({drive_info}')
-        sys.exit(2)
+        return 2
     else:
         usbDrive = drive_info[0]
         backupPath = os.path.join(usbDrive, 'Backup')
         if not os.path.isdir(backupPath):
             print(f'Error: Backup directory missing - {backupPath}')
-            sys.exit(3)
+            return 3
         else:
             modificationDate = getFileModificationDate(backupPath)
             serialNumber = getSerialNumber(backupPath)
             if serialNumber is None:
                 print("Error: Serial Number file missing from backup folder")
-                sys.exit(4)
+                return 4
             else:
                 newBackupName = f'Backup from F2-{serialNumber} {modificationDate}'
                 workingDir = os.getcwd()
                 newPath = os.path.join(workingDir, newBackupName)
                 copy_tree(backupPath, newPath)
                 print(f'Success: Copied "{backupPath}" to "{newPath}"')
+                return 0
 
 
 if __name__ == '__main__':
-    GetBakup()
+    errorCode = GetBackup()
+    input("Press Enter to continue...")
+    sys.exit(errorCode)
