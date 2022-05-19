@@ -29,45 +29,48 @@ def getFileModificationDate(path):
     return timeString
 
 
-def getSerialNumber(backupPath):
-    serialNumberPath = os.path.join(backupPath, 'SerialNumber.txt')
+def getSerial(backupPath, FileName):
     serialNumber = None
+    serialNumberPath = os.path.join(backupPath, FileName)
     if os.path.isfile(serialNumberPath):
         with open(serialNumberPath) as serialNumberFile:
             serialNumber = serialNumberFile.read()
     return serialNumber
 
 
-def GetBackup():
-    drive_info = locate_usb()
-    if len(drive_info) == 0:
-        print("Error: No USB drive detected")
-        return 1
-    elif len(drive_info) > 1:
-        print(f'Error: More than one USB drive detected - ({drive_info}')
-        return 2
+def getSerialNumber(backupPath):
+    serialNumber = getSerial(backupPath, "FurnaceNumber.txt")
+    if serialNumber is None:
+        serialNumber = getSerial(backupPath, "SerialNumber.txt")
+    return serialNumber
+
+
+def GetBackup(UsbDrive):
+    backupPath = os.path.join(UsbDrive, 'Backup')
+    if not os.path.isdir(backupPath):
+        print(f'Error: Backup directory missing - {backupPath}')
+        return 3
     else:
-        usbDrive = drive_info[0]
-        backupPath = os.path.join(usbDrive, 'Backup')
-        if not os.path.isdir(backupPath):
-            print(f'Error: Backup directory missing - {backupPath}')
-            return 3
+        modificationDate = getFileModificationDate(backupPath)
+        serialNumber = getSerialNumber(backupPath)
+        if serialNumber is None:
+            print(f'Error: Serial Number file missing from backup folder on "{UsbDrive}"')
+            return 4
         else:
-            modificationDate = getFileModificationDate(backupPath)
-            serialNumber = getSerialNumber(backupPath)
-            if serialNumber is None:
-                print("Error: Serial Number file missing from backup folder")
-                return 4
-            else:
-                newBackupName = f'Backup from F2-{serialNumber} {modificationDate}'
-                workingDir = os.getcwd()
-                newPath = os.path.join(workingDir, newBackupName)
-                copy_tree(backupPath, newPath)
-                print(f'Success: Copied "{backupPath}" to "{newPath}"')
-                return 0
+            newBackupName = f'Backup from F2-{serialNumber} {modificationDate}'
+            workingDir = os.getcwd()
+            newPath = os.path.join(workingDir, newBackupName)
+            copy_tree(backupPath, newPath)
+            print(f'Success: Copied "{backupPath}" to "{newPath}"')
+            return 0
 
 
 if __name__ == '__main__':
-    errorCode = GetBackup()
+    drive_info = locate_usb()
+    if len(drive_info) <= 0:
+        print("Error: No USB drive detected")
+        errorCode = 1
+    for usbDrive in drive_info:
+        errorCode = GetBackup(usbDrive)
     input("Press Enter to continue...")
     sys.exit(errorCode)
